@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix Booking | Pro Suite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --matrix-green: #00ff41; --dark-green: #003b0f; }
+        body { 
+            background-color: #000; 
+            color: var(--matrix-green); 
+            font-family: 'Fira Code', monospace; 
+            margin: 0; 
+            overflow-x: hidden;
+        }
+
+        /* Lluvia de código sutil */
+        .matrix-bg { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: linear-gradient(rgba(0, 255, 65, 0.05) 1px, transparent 1px), 
+                        linear-gradient(90deg, rgba(0, 255, 65, 0.05) 1px, transparent 1px); 
+            background-size: 20px 20px; z-index: -1; animation: move 20s linear infinite; 
+        }
+        @keyframes move { from { background-position: 0 0; } to { background-position: 0 1000px; } }
+
+        /* Línea de escaneo */
+        .scanline {
+            width: 100%; height: 2px; background: rgba(0, 255, 65, 0.1);
+            position: absolute; top: 0; left: 0; z-index: 10;
+            animation: scan 4s linear infinite; pointer-events: none;
+        }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+
+        .terminal-border { 
+            border: 1px solid var(--matrix-green); 
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2); 
+            background: rgba(0, 0, 0, 0.92); 
+        }
+        
+        input, select { 
+            background: #050505 !important; 
+            border: 1px solid var(--dark-green) !important; 
+            color: var(--matrix-green) !important; 
+            padding: 14px !important; width: 100%; outline: none; 
+            transition: all 0.3s;
+        }
+        input:focus { border-color: var(--matrix-green) !important; box-shadow: 0 0 10px var(--matrix-green); }
+        
+        .btn-matrix { 
+            border: 1px solid var(--matrix-green); 
+            transition: all 0.3s; cursor: pointer; 
+            text-transform: uppercase; font-weight: bold;
+        }
+        .btn-matrix:hover:not(:disabled) { 
+            background: var(--matrix-green); color: #000; 
+            box-shadow: 0 0 20px var(--matrix-green); 
+        }
+
+        .tab-btn { opacity: 0.4; cursor: pointer; padding: 12px; border-bottom: 2px solid transparent; transition: 0.3s; font-size: 11px; letter-spacing: 2px; }
+        .tab-btn.active { opacity: 1; border-bottom: 2px solid var(--matrix-green); color: #fff; }
+        
+        .slot-btn { 
+            border: 1px solid var(--dark-green); padding: 10px; font-size: 10px; 
+            text-align: center; cursor: pointer; transition: 0.2s;
+        }
+        .slot-btn:hover { border-color: var(--matrix-green); background: rgba(0, 255, 65, 0.1); }
+        .slot-btn.selected { background: var(--matrix-green); color: black; font-weight: bold; box-shadow: 0 0 10px var(--matrix-green); }
+
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+        
+        /* Animación de entrada */
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="matrix-bg"></div>
+    
+    <div class="w-full max-w-lg p-8 terminal-border relative overflow-hidden">
+        <div class="scanline"></div>
+        
+        <h2 id="status" class="text-center tracking-[0.4em] mb-10 text-[10px] font-bold">> SYSTEM_READY_</h2>
+
+        <div id="section-auth" class="fade-in">
+            <div class="flex justify-around mb-10 border-b border-green-900/30">
+                <div id="tab-login" class="tab-btn active" onclick="switchTab('login')">IDENTIFY</div>
+                <div id="tab-signup" class="tab-btn" onclick="switchTab('signup')">INITIALIZE</div>
+            </div>
+
+            <div class="space-y-5">
+                <div id="dni-field" class="hidden animate-pulse">
+                    <label class="block text-[9px] mb-1 opacity-50">DNI_IDENT_NUMBER</label>
+                    <input type="text" id="dni" placeholder="Ex: 40123456">
+                </div>
+                <div>
+                    <label class="block text-[9px] mb-1 opacity-50">ACCESS_EMAIL</label>
+                    <input type="email" id="email" placeholder="OPERATOR@ZION.COM">
+                </div>
+                <div>
+                    <label class="block text-[9px] mb-1 opacity-50">SECURITY_CODE</label>
+                    <input type="password" id="password" placeholder="********">
+                </div>
+                <button onclick="processAuth()" id="main-btn" class="btn-matrix w-full py-5 mt-6 tracking-widest text-xs">Execute Access</button>
+            </div>
+        </div>
+
+        <div id="section-client" class="hidden fade-in space-y-8">
+            <div class="flex justify-between items-center border-b border-green-900/50 pb-4">
+                <span class="text-[10px] font-bold tracking-widest opacity-80">CLIENT_DASHBOARD</span>
+                <button onclick="logout()" class="text-[9px] border border-red-900 px-3 py-1 text-red-500 hover:bg-red-950">DISCONNECT</button>
+            </div>
+
+            <div class="space-y-6">
+                <div>
+                    <label class="text-[9px] mb-2 block opacity-50 font-bold">1. SELECT_MISSION (SERVICE)</label>
+                    <select id="servicio">
+                        <option value="Corte de Pelo">HAIRCUT_LVL_1</option>
+                        <option value="Barba Zion">BEARD_RESET</option>
+                        <option value="Combo Neo">FULL_UPGRADE (PELO+BARBA)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-[9px] mb-2 block opacity-50 font-bold">2. TEMPORAL_COORDINATE (DATE)</label>
+                    <input type="date" id="fecha-cliente" onchange="generarSlots()">
+                </div>
+
+                <div>
+                    <label class="text-[9px] mb-3 block opacity-50 font-bold">3. AVAILABLE_TIME_SLOTS</label>
+                    <div id="slots-grid" class="grid grid-cols-4 gap-2">
+                        </div>
+                    <input type="hidden" id="hora-seleccionada">
+                </div>
+
+                <button onclick="agendarTurno()" class="btn-matrix w-full py-5 font-bold tracking-[0.3em] bg-green-950/20 mt-4 text-xs">Confirm Reservation</button>
+            </div>
+        </div>
+
+        <div id="section-admin" class="hidden fade-in space-y-8">
+            <div class="flex justify-between items-center border-b border-green-900/50 pb-4">
+                <span class="text-[10px] font-bold tracking-widest text-white">MASTER_ADMIN_CONSOLE</span>
+                <button onclick="logout()" class="text-[9px] border border-red-900 px-3 py-1 text-red-500">DISCONNECT</button>
+            </div>
+
+            <div class="space-y-6">
+                <div>
+                    <label class="text-[9px] mb-2 block opacity-50 font-bold">FILTER_BY_COORDINATE (DATE)</label>
+                    <input type="date" id="fecha-admin" onchange="cargarTurnosAdmin()">
+                </div>
+                
+                <div id="lista-turnos" class="space-y-4 min-h-[300px]">
+                    <p class="text-[10px] opacity-30 text-center mt-20 italic">WAITING_FOR_DATE_SELECTION...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURACIÓN ---
+       const SUPABASE_URL = 'https://rypbkgwzilxqtmtmdumi.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_JOY3kbBbeou0SCqrRUSvgw_tQUbCkUU';
+        const ADMIN_EMAIL = 'jefrete@gmail.com'; 
+
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let currentMode = 'login';
+
+        function switchTab(mode) {
+            currentMode = mode;
+            document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+            document.getElementById('tab-signup').classList.toggle('active', mode === 'signup');
+            document.getElementById('dni-field').classList.toggle('hidden', mode === 'login');
+            document.getElementById('main-btn').innerText = mode === 'login' ? 'Execute Login' : 'Initialize Account';
+        }
+
+        async function processAuth() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const status = document.getElementById('status');
+
+            if (!email || !password) return;
+            status.innerText = "> DECRYPTING_CREDENTIALS...";
+
+            if (currentMode === 'signup') {
+                const dni = document.getElementById('dni').value;
+                const { data, error } = await _supabase.auth.signUp({
+                    email, password, options: { data: { document_number: dni } }
+                });
+                if (error) status.innerText = "> ERR: " + error.message.toUpperCase();
+                else if (data.user) checkRole(data.user);
+            } else {
+                const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+                if (error) status.innerText = "> LOGIN_FAILED: ACCESS_DENIED";
+                else checkRole(data.user);
+            }
+        }
+
+        function checkRole(user) {
+            document.getElementById('section-auth').classList.add('hidden');
+            if (user.email === ADMIN_EMAIL) {
+                document.getElementById('section-admin').classList.remove('hidden');
+                document.getElementById('status').innerText = "> MASTER_OPERATOR_RECOGNIZED";
+            } else {
+                document.getElementById('section-client').classList.remove('hidden');
+                document.getElementById('status').innerText = "> CLIENT_ENTITY_CONNECTED";
+            }
+        }
+
+        function logout() { location.reload(); }
+
+        // TURNERO CLIENTE
+        function generarSlots() {
+            const grid = document.getElementById('slots-grid');
+            const horas = ["09:00", "10:00", "11:00", "12:00", "15:00", "16:00", "17:00", "18:00"];
+            grid.innerHTML = '';
+            horas.forEach(h => {
+                const div = document.createElement('div');
+                div.className = 'slot-btn';
+                div.innerText = `[${h}]`;
+                div.onclick = () => {
+                    document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+                    div.classList.add('selected');
+                    document.getElementById('hora-seleccionada').value = h;
+                };
+                grid.appendChild(div);
+            });
+        }
+
+        async function agendarTurno() {
+            const fecha = document.getElementById('fecha-cliente').value;
+            const hora = document.getElementById('hora-seleccionada').value;
+            const servicio = document.getElementById('servicio').value;
+            const status = document.getElementById('status');
+
+            if (!fecha || !hora) { alert("SELECT DATE AND TIME"); return; }
+
+            const { data: { user } } = await _supabase.auth.getUser();
+
+            const { error } = await _supabase.from('turnos').insert([{
+                user_id: user.id,
+                user_email: user.email,
+                dni: user.user_metadata.document_number || "N/A",
+                fecha, hora, servicio
+            }]);
+
+            if (error) {
+                status.innerText = "> ERR: DATABASE_SYNC_FAILED";
+                console.error(error);
+            } else {
+                status.innerText = "> DATA_INJECTED_SUCCESSFULLY";
+                alert("MISSION CONFIRMED!");
+                window.open(`https://wa.me/5491122334455?text=Turno:%20${servicio}%20el%20${fecha}%20a%20las%20${hora}`);
+            }
+        }
+
+        // PANEL ADMIN
+        async function cargarTurnosAdmin() {
+            const fecha = document.getElementById('fecha-admin').value;
+            const lista = document.getElementById('lista-turnos');
+            lista.innerHTML = '<p class="text-[10px] animate-pulse text-center mt-20">> RETRIEVING_DATA...</p>';
+
+            const { data, error } = await _supabase
+                .from('turnos')
+                .select('*')
+                .eq('fecha', fecha)
+                .order('hora', { ascending: true });
+
+            if (error) {
+                lista.innerHTML = "> ERR_FETCHING_AGENDA";
+            } else {
+                lista.innerHTML = data.length ? '' : '<p class="text-[10px] opacity-30 text-center mt-20">NO_COORDINATES_FOUND_FOR_THIS_DATE</p>';
+                data.forEach(t => {
+                    lista.innerHTML += `
+                        <div class="border border-green-900/40 p-4 bg-green-950/10 flex justify-between items-center fade-in">
+                            <div>
+                                <p class="text-[11px] font-bold text-white tracking-widest">${t.hora} - ${t.servicio}</p>
+                                <p class="text-[9px] opacity-50 mt-1">${t.user_email} | DNI: ${t.dni}</p>
+                            </div>
+                            <div class="text-[8px] border border-green-500 px-2 py-1 font-bold">READY</div>
+                        </div>
+                    `;
+                });
+            }
+        }
+    </script>
+</body>
+</html>
