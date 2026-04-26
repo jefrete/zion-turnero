@@ -3,30 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matrix Booking | Pro Suite</title>
+    <title>Zion Suite | Pro Booking</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root { --matrix-green: #00ff41; --dark-green: #003b0f; }
         body { 
-            background-color: #000; 
-            color: var(--matrix-green); 
+            background-color: #000; color: var(--matrix-green); 
             font-family: 'Fira Code', monospace; 
-            margin: 0; 
-            overflow-x: hidden;
+            margin: 0; overflow-x: hidden;
         }
 
-        /* Lluvia de código sutil */
+        /* Fondo y Línea de Escaneo (Aesthetic) */
         .matrix-bg { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: linear-gradient(rgba(0, 255, 65, 0.05) 1px, transparent 1px), 
-                        linear-gradient(90deg, rgba(0, 255, 65, 0.05) 1px, transparent 1px); 
-            background-size: 20px 20px; z-index: -1; animation: move 20s linear infinite; 
+            background: linear-gradient(rgba(0, 255, 65, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 65, 0.05) 1px, transparent 1px); 
+            background-size: 25px 25px; z-index: -1; animation: move 20s linear infinite; 
         }
         @keyframes move { from { background-position: 0 0; } to { background-position: 0 1000px; } }
-
-        /* Línea de escaneo */
+        
         .scanline {
             width: 100%; height: 2px; background: rgba(0, 255, 65, 0.1);
             position: absolute; top: 0; left: 0; z-index: 10;
@@ -34,125 +30,132 @@
         }
         @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
 
+        /* Contenedor más grande y legible */
         .terminal-border { 
             border: 1px solid var(--matrix-green); 
-            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2); 
-            background: rgba(0, 0, 0, 0.92); 
+            box-shadow: 0 0 25px rgba(0, 255, 65, 0.3); 
+            background: rgba(0, 0, 0, 0.95); 
         }
         
+        /* Inputs y Selects más grandes */
         input, select { 
             background: #050505 !important; 
             border: 1px solid var(--dark-green) !important; 
             color: var(--matrix-green) !important; 
-            padding: 14px !important; width: 100%; outline: none; 
+            padding: 16px !important; width: 100%; outline: none; 
+            font-size: 16px !important; /* Más grande */
             transition: all 0.3s;
         }
         input:focus { border-color: var(--matrix-green) !important; box-shadow: 0 0 10px var(--matrix-green); }
         
+        /* Botones Pro */
         .btn-matrix { 
             border: 1px solid var(--matrix-green); 
             transition: all 0.3s; cursor: pointer; 
             text-transform: uppercase; font-weight: bold;
+            font-size: 14px; letter-spacing: 3px;
         }
         .btn-matrix:hover:not(:disabled) { 
             background: var(--matrix-green); color: #000; 
             box-shadow: 0 0 20px var(--matrix-green); 
         }
 
-        .tab-btn { opacity: 0.4; cursor: pointer; padding: 12px; border-bottom: 2px solid transparent; transition: 0.3s; font-size: 11px; letter-spacing: 2px; }
+        /* Tabs Pro */
+        .tab-btn { opacity: 0.4; cursor: pointer; padding: 14px; border-bottom: 2px solid transparent; transition: 0.3s; font-size: 12px; letter-spacing: 2px; }
         .tab-btn.active { opacity: 1; border-bottom: 2px solid var(--matrix-green); color: #fff; }
         
+        /* Slots de Horario Grandes */
         .slot-btn { 
-            border: 1px solid var(--dark-green); padding: 10px; font-size: 10px; 
-            text-align: center; cursor: pointer; transition: 0.2s;
+            border: 1px solid var(--dark-green); padding: 12px; font-size: 18px; /* TAMAÑO XXL */
+            text-align: center; cursor: pointer; transition: 0.2s; font-weight: bold;
         }
         .slot-btn:hover { border-color: var(--matrix-green); background: rgba(0, 255, 65, 0.1); }
         .slot-btn.selected { background: var(--matrix-green); color: black; font-weight: bold; box-shadow: 0 0 10px var(--matrix-green); }
 
         input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
         
-        /* Animación de entrada */
         .fade-in { animation: fadeIn 0.5s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
+<body class="min-h-screen flex items-center justify-center p-6 md:p-10">
     <div class="matrix-bg"></div>
     
-    <div class="w-full max-w-lg p-8 terminal-border relative overflow-hidden">
+    <div class="w-full max-w-xl p-10 md:p-14 terminal-border relative overflow-hidden">
         <div class="scanline"></div>
         
-        <h2 id="status" class="text-center tracking-[0.4em] mb-10 text-[10px] font-bold">> SYSTEM_READY_</h2>
+        <h2 id="status" class="text-center tracking-[0.5em] mb-12 text-xs font-bold opacity-90">> SYSTEM_PRO_SUITE_READY_</h2>
 
         <div id="section-auth" class="fade-in">
-            <div class="flex justify-around mb-10 border-b border-green-900/30">
+            <div class="flex justify-around mb-12 border-b border-green-900/30">
                 <div id="tab-login" class="tab-btn active" onclick="switchTab('login')">IDENTIFY</div>
                 <div id="tab-signup" class="tab-btn" onclick="switchTab('signup')">INITIALIZE</div>
             </div>
 
-            <div class="space-y-5">
-                <div id="dni-field" class="hidden animate-pulse">
-                    <label class="block text-[9px] mb-1 opacity-50">DNI_IDENT_NUMBER</label>
+            <div class="space-y-6">
+                <div id="dni-field" class="hidden">
+                    <label class="block text-xs mb-1 opacity-50">DNI_IDENT_NUMBER</label>
                     <input type="text" id="dni" placeholder="Ex: 40123456">
                 </div>
                 <div>
-                    <label class="block text-[9px] mb-1 opacity-50">ACCESS_EMAIL</label>
+                    <label class="block text-xs mb-1 opacity-50">ACCESS_EMAIL</label>
                     <input type="email" id="email" placeholder="OPERATOR@ZION.COM">
                 </div>
                 <div>
-                    <label class="block text-[9px] mb-1 opacity-50">SECURITY_CODE</label>
+                    <label class="block text-xs mb-1 opacity-50">SECURITY_CODE</label>
                     <input type="password" id="password" placeholder="********">
                 </div>
-                <button onclick="processAuth()" id="main-btn" class="btn-matrix w-full py-5 mt-6 tracking-widest text-xs">Execute Access</button>
+                <button onclick="processAuth()" id="main-btn" class="btn-matrix w-full py-6 mt-8">Execute Access</button>
             </div>
         </div>
 
-        <div id="section-client" class="hidden fade-in space-y-8">
-            <div class="flex justify-between items-center border-b border-green-900/50 pb-4">
-                <span class="text-[10px] font-bold tracking-widest opacity-80">CLIENT_DASHBOARD</span>
-                <button onclick="logout()" class="text-[9px] border border-red-900 px-3 py-1 text-red-500 hover:bg-red-950">DISCONNECT</button>
+        <div id="section-client" class="hidden fade-in space-y-10">
+            <div class="flex justify-between items-center border-b border-green-900/50 pb-6">
+                <span class="text-xs font-bold tracking-widest text-white">CLIENT_CONSOLE</span>
+                <button onclick="logout()" class="text-xs border border-red-900 px-4 py-2 text-red-500 hover:bg-red-950">DISCONNECT</button>
             </div>
 
-            <div class="space-y-6">
+            <div class="space-y-8">
                 <div>
-                    <label class="text-[9px] mb-2 block opacity-50 font-bold">1. SELECT_MISSION (SERVICE)</label>
+                    <label class="text-xs mb-2 block opacity-60 font-bold">1. SELECT_MISSION (SERVICE)</label>
                     <select id="servicio">
                         <option value="Corte de Pelo">HAIRCUT_LVL_1</option>
                         <option value="Barba Zion">BEARD_RESET</option>
-                        <option value="Combo Neo">FULL_UPGRADE (PELO+BARBA)</option>
+                        <option value="Combo Neo">FULL_UPGRADE</option>
                     </select>
                 </div>
 
                 <div>
-                    <label class="text-[9px] mb-2 block opacity-50 font-bold">2. TEMPORAL_COORDINATE (DATE)</label>
-                    <input type="date" id="fecha-cliente" onchange="generarSlots()">
+                    <label class="text-xs mb-2 block opacity-60 font-bold">2. TEMPORAL_COORDINATE (DATE)</label>
+                    <input type="date" id="fecha-cliente" onchange="actualizarSlotsDisponibles()">
                 </div>
 
                 <div>
-                    <label class="text-[9px] mb-3 block opacity-50 font-bold">3. AVAILABLE_TIME_SLOTS</label>
-                    <div id="slots-grid" class="grid grid-cols-4 gap-2">
-                        </div>
+                    <label class="text-xs mb-3 block opacity-60 font-bold">3. AVAILABLE_TIME_SLOTS (Consulta Real-Time)</label>
+                    <div id="slots-grid" class="grid grid-cols-3 gap-3">
+                        <p class="col-span-3 text-xs opacity-40 text-center py-6 mt-2">WAITING_FOR_DATE_SELECTION...</p>
+                    </div>
                     <input type="hidden" id="hora-seleccionada">
                 </div>
 
-                <button onclick="agendarTurno()" class="btn-matrix w-full py-5 font-bold tracking-[0.3em] bg-green-950/20 mt-4 text-xs">Confirm Reservation</button>
+                <button onclick="agendarTurno()" class="btn-matrix w-full py-6 font-bold tracking-[0.4em] bg-green-950/30 mt-8">Confirm Reservation</button>
             </div>
         </div>
 
-        <div id="section-admin" class="hidden fade-in space-y-8">
-            <div class="flex justify-between items-center border-b border-green-900/50 pb-4">
-                <span class="text-[10px] font-bold tracking-widest text-white">MASTER_ADMIN_CONSOLE</span>
-                <button onclick="logout()" class="text-[9px] border border-red-900 px-3 py-1 text-red-500">DISCONNECT</button>
+        <div id="section-admin" class="hidden fade-in space-y-10">
+            <div class="flex justify-between items-center border-b border-green-900/50 pb-6">
+                <span class="text-xs font-bold tracking-widest text-white">MASTER_AGENDA</span>
+                <button onclick="logout()" class="text-xs border border-red-900 px-4 py-2 text-red-500">DISCONNECT</button>
             </div>
 
-            <div class="space-y-6">
+            <div class="space-y-8">
                 <div>
-                    <label class="text-[9px] mb-2 block opacity-50 font-bold">FILTER_BY_COORDINATE (DATE)</label>
+                    <label class="text-xs mb-2 block opacity-60 font-bold">FILTER_BY_COORDINATE (DATE)</label>
                     <input type="date" id="fecha-admin" onchange="cargarTurnosAdmin()">
                 </div>
                 
-                <div id="lista-turnos" class="space-y-4 min-h-[300px]">
-                    <p class="text-[10px] opacity-30 text-center mt-20 italic">WAITING_FOR_DATE_SELECTION...</p>
+                <div id="lista-turnos" class="space-y-5 min-h-[350px]">
+                    <p class="text-xs opacity-40 text-center mt-20 italic">SELECT_DATE_TO_VIEW_AGENDA...</p>
                 </div>
             </div>
         </div>
@@ -162,7 +165,7 @@
         // --- CONFIGURACIÓN ---
        const SUPABASE_URL = 'https://rypbkgwzilxqtmtmdumi.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_JOY3kbBbeou0SCqrRUSvgw_tQUbCkUU';
-        const ADMIN_EMAIL = 'jefrete@gmail.com'; 
+        const ADMIN_EMAIL = 'jefrete@gmail.com'; // Definí quién es el Admin
 
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         let currentMode = 'login';
@@ -210,22 +213,59 @@
 
         function logout() { location.reload(); }
 
-        // TURNERO CLIENTE
-        function generarSlots() {
+        // --- LÓGICA DE TURNERO (CLIENTE) CON DISPONIBILIDAD ---
+
+        async function actualizarSlotsDisponibles() {
+            const fecha = document.getElementById('fecha-cliente').value;
             const grid = document.getElementById('slots-grid');
-            const horas = ["09:00", "10:00", "11:00", "12:00", "15:00", "16:00", "17:00", "18:00"];
+            const status = document.getElementById('status');
+            
+            if (!fecha) return;
+            
+            grid.innerHTML = '<p class="col-span-3 text-xs animate-pulse text-center py-6 mt-2">> CONSULTING_TIMELINE...</p>';
+            document.getElementById('hora-seleccionada').value = ""; // Reset selección
+
+            // Horarios estándar (puedes cambiarlos)
+            const horasEstandar = ["09:00", "10:00", "11:00", "12:00", "15:00", "16:00", "17:00", "18:00"];
+
+            // 1. Consultamos qué turnos ya existen para esta fecha
+            const { data, error } = await _supabase
+                .from('turnos')
+                .select('hora')
+                .eq('fecha', fecha);
+
+            if (error) {
+                grid.innerHTML = '<p class="col-span-3 text-red-500 text-xs text-center">ERROR_SYNCING_DATA</p>';
+                console.error(error);
+                return;
+            }
+
+            // 2. Creamos un set de horas ocupadas para búsqueda rápida
+            const horasOcupadas = new Set(data.map(t => t.hora));
+
+            // 3. Generamos los slots solo para las horas libres
             grid.innerHTML = '';
-            horas.forEach(h => {
-                const div = document.createElement('div');
-                div.className = 'slot-btn';
-                div.innerText = `[${h}]`;
-                div.onclick = () => {
-                    document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
-                    div.classList.add('selected');
-                    document.getElementById('hora-seleccionada').value = h;
-                };
-                grid.appendChild(div);
+            let slotsGenerados = 0;
+
+            horasEstandar.forEach(h => {
+                if (!horasOcupadas.has(h)) {
+                    const div = document.createElement('div');
+                    div.className = 'slot-btn';
+                    div.innerText = h; // Formato XXL limpio
+                    div.onclick = () => {
+                        document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+                        div.classList.add('selected');
+                        document.getElementById('hora-seleccionada').value = h;
+                    };
+                    grid.appendChild(div);
+                    slotsGenerados++;
+                }
             });
+
+            // 4. Si no hay slots libres, avisamos
+            if (slotsGenerados === 0) {
+                grid.innerHTML = '<p class="col-span-3 text-xs opacity-50 text-center py-6 mt-2">NO_TIME_SLOTS_AVAILABLE_FOR_THIS_DATE</p>';
+            }
         }
 
         async function agendarTurno() {
@@ -234,10 +274,11 @@
             const servicio = document.getElementById('servicio').value;
             const status = document.getElementById('status');
 
-            if (!fecha || !hora) { alert("SELECT DATE AND TIME"); return; }
+            if (!fecha || !hora) { alert("SELECT_COORDINATES (DATE+TIME)"); return; }
 
             const { data: { user } } = await _supabase.auth.getUser();
 
+            // INSERTAMOS EN DB (El constraint unique evitará duplicados en el último segundo)
             const { error } = await _supabase.from('turnos').insert([{
                 user_id: user.id,
                 user_email: user.email,
@@ -246,20 +287,29 @@
             }]);
 
             if (error) {
-                status.innerText = "> ERR: DATABASE_SYNC_FAILED";
-                console.error(error);
+                // Si falla por duplicado
+                if(error.code === '23505') {
+                    status.innerText = "> ERR: HORARIO_SE_ACABA_DE_OCUPAR";
+                    actualizarSlotsDisponibles(); // Recargamos para mostrar los libres reales
+                } else {
+                    status.innerText = "> ERR: DATABASE_SYNC_FAILED";
+                    console.error(error);
+                }
             } else {
                 status.innerText = "> DATA_INJECTED_SUCCESSFULLY";
                 alert("MISSION CONFIRMED!");
-                window.open(`https://wa.me/5491122334455?text=Turno:%20${servicio}%20el%20${fecha}%20a%20las%20${hora}`);
+                window.open(`https://wa.me/542994136709?text=Zion_Reserva:%20${servicio}%20el%20${fecha}%20a%20las%20${hora}`);
+                actualizarSlotsDisponibles(); // Recargamos para que ese horario ya no aparezca
             }
         }
 
-        // PANEL ADMIN
+        // --- PANEL ADMIN (AGENDA PRO) ---
         async function cargarTurnosAdmin() {
             const fecha = document.getElementById('fecha-admin').value;
             const lista = document.getElementById('lista-turnos');
-            lista.innerHTML = '<p class="text-[10px] animate-pulse text-center mt-20">> RETRIEVING_DATA...</p>';
+            if (!fecha) return;
+
+            lista.innerHTML = '<p class="text-xs animate-pulse text-center mt-20">> RETRIEVING_DATA...</p>';
 
             const { data, error } = await _supabase
                 .from('turnos')
@@ -270,15 +320,15 @@
             if (error) {
                 lista.innerHTML = "> ERR_FETCHING_AGENDA";
             } else {
-                lista.innerHTML = data.length ? '' : '<p class="text-[10px] opacity-30 text-center mt-20">NO_COORDINATES_FOUND_FOR_THIS_DATE</p>';
+                lista.innerHTML = data.length ? '' : '<p class="text-xs opacity-30 text-center mt-20">NO_COORDINATES_FOUND_FOR_THIS_DATE</p>';
                 data.forEach(t => {
                     lista.innerHTML += `
-                        <div class="border border-green-900/40 p-4 bg-green-950/10 flex justify-between items-center fade-in">
+                        <div class="border border-green-900/40 p-6 bg-green-950/10 flex justify-between items-center fade-in">
                             <div>
-                                <p class="text-[11px] font-bold text-white tracking-widest">${t.hora} - ${t.servicio}</p>
-                                <p class="text-[9px] opacity-50 mt-1">${t.user_email} | DNI: ${t.dni}</p>
+                                <p class="text-sm font-bold text-white tracking-widest">${t.hora} - ${t.servicio}</p>
+                                <p class="text-[10px] opacity-50 mt-1">${t.user_email} | DNI: ${t.dni}</p>
                             </div>
-                            <div class="text-[8px] border border-green-500 px-2 py-1 font-bold">READY</div>
+                            <div class="text-[10px] border border-green-500 px-3 py-1 font-bold">READY</div>
                         </div>
                     `;
                 });

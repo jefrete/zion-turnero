@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zion Salud | Servicios de Enfermería</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            background-color: #f0f4f8; 
+            color: #1a365d; 
+            font-family: 'Inter', sans-serif;
+            font-size: 18px; /* Base grande para legibilidad */
+        }
+
+        .clinical-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Inputs GIGANTES para fácil manejo */
+        input, select {
+            border: 2px solid #cbd5e0 !important;
+            border-radius: 12px !important;
+            padding: 18px !important;
+            font-size: 20px !important;
+            width: 100%;
+            outline: none;
+            color: #2d3748;
+        }
+        input:focus { border-color: #3182ce !important; background-color: #fff; }
+
+        /* Botones de acción principal */
+        .btn-primary {
+            background-color: #2b6cb0;
+            color: white;
+            padding: 22px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 22px;
+            transition: all 0.2s;
+            text-align: center;
+            width: 100%;
+        }
+        .btn-primary:hover { background-color: #2c5282; transform: translateY(-2px); }
+
+        /* Slots de Horario (Botones grandes y claros) */
+        .slot-btn {
+            background: #edf2f7;
+            border: 2px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 22px;
+            font-weight: 700;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .slot-btn:hover { border-color: #3182ce; background: #ebf8ff; }
+        .slot-btn.selected { 
+            background-color: #3182ce; 
+            color: white; 
+            border-color: #2b6cb0;
+            box-shadow: 0 4px 12px rgba(49, 130, 206, 0.4);
+        }
+
+        .tab-active {
+            border-bottom: 4px solid #3182ce;
+            color: #2b6cb0;
+            font-weight: bold;
+        }
+
+        .admin-card {
+            background: #fff;
+            border-left: 8px solid #3182ce;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-2xl p-8 md:p-12 clinical-card">
+        
+        <div class="text-center mb-10">
+            <h1 class="text-3xl font-bold text-blue-900 mb-2">Zion Salud</h1>
+            <p class="text-lg text-gray-600">Servicios Profesionales de Enfermería</p>
+        </div>
+
+        <div id="status-msg" class="text-center text-sm font-bold text-blue-600 mb-6 uppercase tracking-wider"></div>
+
+        <div id="section-auth" class="space-y-8">
+            <div class="flex border-b border-gray-200">
+                <button id="tab-login" class="flex-1 py-4 tab-active text-xl" onclick="switchTab('login')">Ingresar</button>
+                <button id="tab-signup" class="flex-1 py-4 text-gray-400 text-xl" onclick="switchTab('signup')">Registrarse</button>
+            </div>
+
+            <div class="space-y-6">
+                <div id="dni-field" class="hidden">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Número de DNI</label>
+                    <input type="number" id="dni" placeholder="Ej: 12345678">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Correo Electrónico</label>
+                    <input type="email" id="email" placeholder="nombre@correo.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Contraseña</label>
+                    <input type="password" id="password" placeholder="••••••••">
+                </div>
+                <button onclick="processAuth()" id="main-btn" class="btn-primary">Entrar al Sistema</button>
+            </div>
+        </div>
+
+        <div id="section-client" class="hidden space-y-10">
+            <div class="bg-blue-50 p-6 rounded-xl border border-blue-100 flex justify-between items-center">
+                <p class="text-blue-800 font-bold">Sesión Iniciada</p>
+                <button onclick="location.reload()" class="text-red-600 font-bold underline">Salir</button>
+            </div>
+
+            <div class="space-y-8">
+                <div>
+                    <label class="text-lg font-bold block mb-3">1. Seleccione el Servicio</label>
+                    <select id="servicio">
+                        <option value="Control de Presión">Control de Presión y Signos Vitales</option>
+                        <option value="Aplicación de Inyectable">Aplicación de Inyectables</option>
+                        <option value="Curaciones">Curaciones y Tratamiento de Heridas</option>
+                        <option value="Higiene y Confort">Higiene y Confort (Asistencia)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-lg font-bold block mb-3">2. Elija el Día</label>
+                    <input type="date" id="fecha-cliente" onchange="actualizarSlots()">
+                </div>
+
+                <div>
+                    <label class="text-lg font-bold block mb-3">3. Elija la Hora (Disponibles)</label>
+                    <div id="slots-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <p class="col-span-full text-center text-gray-400 py-4 italic">Seleccione una fecha primero...</p>
+                    </div>
+                    <input type="hidden" id="hora-seleccionada">
+                </div>
+
+                <button onclick="agendarTurno()" class="btn-primary mt-6">Confirmar Turno</button>
+            </div>
+        </div>
+
+        <div id="section-admin" class="hidden space-y-8">
+            <div class="flex justify-between items-center border-b pb-6">
+                <h2 class="text-2xl font-bold text-blue-900">Agenda de Turnos</h2>
+                <button onclick="location.reload()" class="text-sm font-bold text-red-600">Cerrar Sesión</button>
+            </div>
+
+            <div>
+                <label class="block font-bold mb-3">Ver turnos del día:</label>
+                <input type="date" id="fecha-admin" onchange="cargarTurnosAdmin()">
+            </div>
+            
+            <div id="lista-turnos" class="space-y-4 pt-6">
+                <p class="text-center text-gray-400">Seleccione una fecha para ver los pacientes.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURACIÓN SUPABASE ---
+        const SUPABASE_URL = 'https://rypbkgwzilxqtmtmdumi.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_JOY3kbBbeou0SCqrRUSvgw_tQUbCkUU';
+        const ADMIN_EMAIL = 'jefrete@gmail.com'; // El mail de la enfermera
+
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let currentMode = 'login';
+
+        function switchTab(mode) {
+            currentMode = mode;
+            document.getElementById('tab-login').className = mode === 'login' ? 'flex-1 py-4 tab-active text-xl' : 'flex-1 py-4 text-gray-400 text-xl';
+            document.getElementById('tab-signup').className = mode === 'signup' ? 'flex-1 py-4 tab-active text-xl' : 'flex-1 py-4 text-gray-400 text-xl';
+            document.getElementById('dni-field').classList.toggle('hidden', mode === 'login');
+            document.getElementById('main-btn').innerText = mode === 'login' ? 'Entrar al Sistema' : 'Crear mi Cuenta';
+        }
+
+        async function processAuth() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const status = document.getElementById('status-msg');
+
+            if (!email || !password) return;
+            status.innerText = "PROCESANDO ACCESO...";
+
+            if (currentMode === 'signup') {
+                const dni = document.getElementById('dni').value;
+                const { data, error } = await _supabase.auth.signUp({
+                    email, password, options: { data: { document_number: dni } }
+                });
+                if (error) status.innerText = "ERROR: " + error.message;
+                else checkRole(data.user);
+            } else {
+                const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+                if (error) status.innerText = "DATOS INCORRECTOS";
+                else checkRole(data.user);
+            }
+        }
+
+        function checkRole(user) {
+            document.getElementById('section-auth').classList.add('hidden');
+            if (user.email === ADMIN_EMAIL) {
+                document.getElementById('section-admin').classList.remove('hidden');
+                document.getElementById('status-msg').innerText = "MODO ADMINISTRACIÓN";
+            } else {
+                document.getElementById('section-client').classList.remove('hidden');
+                document.getElementById('status-msg').innerText = "BIENVENIDO PACIENTE";
+            }
+        }
+
+        async function actualizarSlots() {
+            const fecha = document.getElementById('fecha-cliente').value;
+            const grid = document.getElementById('slots-grid');
+            if (!fecha) return;
+
+            grid.innerHTML = '<p class="col-span-full text-center">Buscando horarios...</p>';
+            
+            const horasBase = ["08:00", "09:00", "10:00", "11:00", "16:00", "17:00", "18:00", "19:00"];
+            
+            const { data } = await _supabase.from('turnos').select('hora').eq('fecha', fecha);
+            const ocupados = new Set(data?.map(t => t.hora));
+
+            grid.innerHTML = '';
+            horasBase.forEach(h => {
+                if (!ocupados.has(h)) {
+                    const btn = document.createElement('div');
+                    btn.className = 'slot-btn';
+                    btn.innerText = h + " hs";
+                    btn.onclick = () => {
+                        document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+                        btn.classList.add('selected');
+                        document.getElementById('hora-seleccionada').value = h;
+                    };
+                    grid.appendChild(btn);
+                }
+            });
+        }
+
+        async function agendarTurno() {
+            const fecha = document.getElementById('fecha-cliente').value;
+            const hora = document.getElementById('hora-seleccionada').value;
+            const servicio = document.getElementById('servicio').value;
+
+            if (!fecha || !hora) { alert("Por favor elija fecha y hora"); return; }
+
+            const { data: { user } } = await _supabase.auth.getUser();
+
+            const { error } = await _supabase.from('turnos').insert([{
+                user_id: user.id,
+                user_email: user.email,
+                dni: user.user_metadata.document_number || "N/A",
+                fecha, hora, servicio
+            }]);
+
+            if (error) {
+                alert("Error al guardar: " + error.message);
+            } else {
+                alert("Turno Agendado con éxito!");
+                const msg = `Zion Salud: Hola, agendé un turno para ${servicio} el día ${fecha} a las ${hora}.`;
+                window.open(`https://wa.me/TU_TELEFONO?text=${encodeURIComponent(msg)}`);
+                actualizarSlots();
+            }
+        }
+
+        async function cargarTurnosAdmin() {
+            const fecha = document.getElementById('fecha-admin').value;
+            const lista = document.getElementById('lista-turnos');
+            lista.innerHTML = 'Cargando...';
+
+            const { data, error } = await _supabase
+                .from('turnos')
+                .select('*')
+                .eq('fecha', fecha)
+                .order('hora', { ascending: true });
+
+            if (data.length === 0) {
+                lista.innerHTML = '<p class="text-center text-gray-400">No hay pacientes para este día.</p>';
+                return;
+            }
+
+            lista.innerHTML = '';
+            data.forEach(t => {
+                lista.innerHTML += `
+                    <div class="admin-card">
+                        <p class="text-2xl font-bold text-blue-800">${t.hora} hs</p>
+                        <p class="text-xl font-bold">${t.servicio}</p>
+                        <p class="text-gray-600">Paciente: ${t.user_email}</p>
+                        <p class="text-gray-600">DNI: ${t.dni}</p>
+                    </div>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
